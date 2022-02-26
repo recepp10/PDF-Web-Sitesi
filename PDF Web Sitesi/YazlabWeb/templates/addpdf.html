@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+
+
+{% block body %}
+<h3>PDF Ekle</h3>
+<hr>
+
+{% from "includes/form.html" import render_field %}
+
+<form method="POST" enctype="multipart/form-data">
+
+    
+             {{ render_field(form.title,class="form-control") }}
+
+             
+             <br>
+
+             
+              <input type = "file" name = "file" accept="application/pdf"/>
+              <br><br>
+              <button type="submit" class="btn btn-success">Pdf Ekle</button>
+             
+     
+   <br>
+    
+    
+    <br>
+    
+</form>
+
+
+{% endblock %}

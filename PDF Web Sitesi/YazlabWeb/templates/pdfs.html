@@ -1,0 +1,34 @@
+{% extends "layout.html" %}
+
+
+{% block body %}
+
+<h3>PDF DOSYALARI</h3>
+<hr>
+
+{% if pdfs %}
+<form action="/search" method="post">
+    <input class="borderless" name="keyword" type="search" placeholder="Ara">
+    <button class="btn  btn-success" type="submit">Ara</button>
+</form>
+<hr>
+
+<ul class="list-group">
+    {% for pdf in pdfs %}
+
+
+        <li class="list-group-item" ><a href="pdf/{{pdf.id}}">{{pdf.title}}</a></li>
+    
+  
+    {% endfor %}
+</ul>
+
+
+{% else %}
+
+<div class="alert alert-danger">Dosya bulunmuyor</div>
+{% endif %}
+
+   
+
+{% endblock %}

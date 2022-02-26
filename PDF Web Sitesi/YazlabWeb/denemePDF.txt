@@ -1,0 +1,210 @@
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+
+ 
+
+Bu  dokümandaki  tüm  bilgiler,  etik  ve  akademik  kurallar  çerçevesinde  elde  edilip 
+sunulmuştur. Ayrıca yine bu kurallar çerçevesinde kendime ait olmayan ve kendimin 
+üretmediği  ve  başka  kaynaklardan  elde  edilen  bilgiler  ve  materyaller  (text,  resim, 
+şekil, tablo vb.) gerekli şekilde referans edilmiş ve dokümanda belirtilmiştir.Tamam. 
+
+Öğrenci No: 190201016 
+
+Adı Soyadı: Recep KOCA 
+
+İmza:………………………………….. 
+
+Öğrenci No: 190202068 
+
+Adı Soyadı: Cihat KARATAŞ 
+
+İmza:………………………………….. 
+
+ii 
+
+ 
+ 
+ 
+TRAWELER YAT PROJESİ  
+ 
+
+ÖZET 
+
+ 
+Trawler adını, tarama yöntemiyle balıkçılık yapmalarından almış olan bu 
+tekneler 1960 lı yıllara doğru gezilerde kullanılmak amacıyla üretildi.  
+Tipik balıkçı teknesi karakteri ve modern yatçılık dizaynlarının 
+kombinasyonu kullanılarak; ortaya klasik tasarımı sayesinde nostaljik bir 
+görüntü veren, sağlam, her yönden ekonomik, bakımı kolay ve konforlu bir 
+deplasman teknesi çıktı. 
+ 
+ 
+ 
+Anahtar  kelimeler: Traweler, Tasarım, Gemi ve Yat, Endaze, İç Mekan. 
+
+ 
+
+ix 
+
+KOCAELİ ÜNİVERSİTESİ 
+
+MÜHENDİSLİK FAKÜLTESİ 
+
+BİLGİSAYAR  MÜHENDİSLİĞİ  BÖLÜMÜ 
+
+BİTİRME PROJESİ 
+
+BULANIK MANTIK İLE KAYNAK KOD BENZERLİĞİ 
+
+FURKAN TÜRKMEN 
+
+ MAHMUT ÖZ 
+
+Prof.Dr. Yaşar BECERİKLİ 
+Danışman, Kocaeli Üniv. 
+
+Doç.Dr.Ögr. Burcu KIR SAVAŞ  
+Jüri Üyesi, Kocaeli Üniv. 
+Dr. Öğr. Üyesi Onur GÖK 
+Jüri Üyesi, Kocaeli Üniv. 
+
+ 
+
+ 
+
+ 
+
+................................................ 
+
+................................................ 
+
+................................................ 
+
+Tezin Savunulduğu Tarih: 05.09.2020 
+
+ 
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+ 
+
+ 
+ 
+ 
+ 
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+GİRİŞ 
+
+Güç sisteminde bir arıza oluştuğunda, maddi kayıp ve can kaybı oluşmasını önlemek 
+
+için,  arızalı  kısmın/bölgenin  sistemden  en  kısa  zamanda  ayrılması  sağlanmalıdır. 
+
+Arıza  giderildikten  sonra,  arızaya  neden  olan  etkeni  belirleyebilmek  için  arıza  yeri 
+
+bulunmalıdır.  Arıza  yeri  tespiti  için,  yakın  ya  da  uzak  baradan  ölçülen  akım  ve 
+
+gerilim  değerleri  kullanılır.  Temel  arıza  yeri  tespiti  için,  yıllar  içerisinde  birçok 
+
+çalışma  geliştirilmiştir  [1-3].  İlk  çalışmalar  ağırlıkla,  yürüyen  dalga  algoritmalarını 
+
+baz  almıştır  [4-7].  Yürüyen  dalga  algoritmaları  arıza  tipi,  arıza  dirençleri,  arıza 
+
+başlangıç açıları ve kaynak empedansları gibi değişkenlerden etkilenmeyecek şekilde 
+
+geliştirilmiştir.  Ancak  yüksek  örnekleme  frekansı  gereksinimi,  örnekleme  penceresi 
+
+seçiminde  karşılaşılan  zorluklar,  arıza  yeri  ve  uzak  baradan  yansıyan  dalgaların 
+
+birbirlerinden  ayırt  edilmesinde  yaşanılan  zorluklar,  yeni  algoritma  çalışmalarına 
+
+zemin oluşturmuştur [8]. 
+
+Yürüyen dalga algoritmalarında yaşanılan  zorluklar, tek bara ve iki bara ölçümlerini 
+
+kullanan  empedansa  dayalı  algoritmaları  ön  plana  çıkarmıştır  [9,  10].  Empedansa 
+
+dayalı  algoritmalar,  basit  olarak  hat  empedansını  gerçek  ve  hesaplanan  değerlerin 
+
+karşılaştırılmasında baz alarak arıza yerini tespit etmeyi amaçlar [11]. 
+
+Tek  bara  ölçümlerini  kullanan  algoritmalar  basit,  az  maliyetli,  uzak  baranın 
+
+etkilerinin arıza yeri tespiti sonuçlarını değiştirmeyeceği algoritmalardır. Ancak arıza 
+
+yeri bulma doğruluğu, iki bara ölçümlerini kullanan algoritmaların altındadır [12, 13]. 
+
+İki bara ölçümlerini kullanan algoritmalar, daha düşük arıza yeri tespiti hata oranına 
+
+sahiptir,  özel  uygulamalar  için  (seri  kapasitör,  FACTS,  transpoze  olmamış  hatlar 
+
+gibi) daha kolaylıkla adapte edilebilirler [14-19]. 
+
+Elektrik  enerjisi  talebinde,  süregelen  artış  ve  iletim  hattının  termal  limitlerine  kadar 
+
+enerji transferi gerekliliği, iletim sistemlerinde hızlı gelişmelere yol açmıştır [20]. Bu 
+
+durum,  iletim  hatlarında  güç  transferi  kabiliyetini,  iletim  kayıplarını,  güç  sistemi 
+
+kararlılığını  ve  gerilim  kontrolünü  iyileştirme  amacıyla,  seri  kapasitörler  kullanımı 
+
+1 
+
+

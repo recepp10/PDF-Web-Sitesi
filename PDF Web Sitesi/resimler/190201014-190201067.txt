@@ -1,0 +1,910 @@
+// RECEP KOCA 190201014
+// MUHAMMED FURKAN BEYAZ 190201067
+
+from flask import Flask,render_template,flash,redirect,url_for,session,logging,request
+from flask_mysqldb import MySQL
+from wtforms import Form,StringField,TextAreaField,PasswordField,validators
+from passlib.hash import sha256_crypt
+from functools import wraps
+from flask_wtf import FlaskForm
+from flask_wtf.file import FileField
+from wtforms import SubmitField
+from pdfminer.converter import TextConverter
+import io 
+
+from pdfminer.converter import TextConverter
+from pdfminer.layout import LAParams
+from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
+from pdfminer.pdfpage import PDFPage
+
+class RegisterForm(Form):
+    name=StringField("Ad Soayd")
+    username=StringField("Kullanıcı Adı")
+    email=StringField("Email")
+    password=PasswordField ("Parola",validators=[
+        validators.DataRequired(message = "Lütfen parola belirleyiniz.."),
+        validators.EqualTo(fieldname="confirm",message="Parolanız uyuşmuyor")
+    ])
+    confirm=PasswordField("Parola Doğrula")
+
+class LoginForm(Form):
+    username=StringField("Kullanıcı Adı:")
+    password=PasswordField("Parola:")
+
+class AdminForm(Form):
+    ausername=StringField("Kullanıcı Adı:")
+    apassword=PasswordField("Parola:")    
+
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if "logged_admin" in session:
+            return f(*args, **kwargs)
+        else:
+            flash("Bu sayfayı görüntülemek için yönetici girişi yapınız.","danger")
+            return redirect(url_for("admin"))
+
+    return decorated_function
+
+
+
+app=Flask(__name__)
+app.secret_key="pdfblog"
+
+app.config["MYSQL_HOST"]="localhost"
+app.config["MYSQL_USER"]="root"
+app.config["MYSQL_PASSWORD"]=""
+app.config["MYSQL_DB"]="pdfblog"
+app.config["MYSQL_CURSORCLASS"]="DictCursor"
+
+
+
+mysql=MySQL(app)
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+@app.route("/about")
+def about():
+    return render_template("about.html")
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    cursor=mysql.connection.cursor()
+    sorgu="Select * From pdfs "
+    result=cursor.execute(sorgu)
+
+    if result > 0:
+        pdfs=cursor.fetchall()
+        return render_template("dashboard.html",pdfs=pdfs)
+    else:
+        return render_template("dashboard.html") 
+
+@app.route("/userview")
+@login_required
+def userview():
+    cursor=mysql.connection.cursor()
+    sorgu="Select * From users"
+    result=cursor.execute(sorgu)
+
+    if result > 0:
+        users=cursor.fetchall()
+        return render_template("userview.html",users=users)
+    else:
+        
+     return render_template("userview.html")  
+
+@app.route("/delete/<string:id>")
+@login_required
+def delete(id):
+    cursor=mysql.connection.cursor()
+    sorgu="Select * From admins "
+    result=cursor.execute(sorgu)
+
+    if result > 0:
+        sorgu2="Delete from users where id=%s"
+        cursor.execute(sorgu2,(id,))
+        mysql.connection.commit()
+        return redirect(url_for("userview"))
+        
+    else:
+        
+     flash("Bu işleme yetkiniz yok..","danger")
+     return redirect(url_for("index"))
+
+
+
+
+    
+
+    
+      
+
+
+   
+#KAYIT İŞLEMİ
+@app.route("/register",methods=["GET","POST"])
+def register():
+    form=RegisterForm(request.form)
+
+    if request.method=="POST" and form.validate():
+        name=form.name.data
+        username=form.username.data
+        email=form.email.data
+        password=sha256_crypt.encrypt(form.password.data)
+
+        cursor=mysql.connection.cursor()
+        sorgu="Insert into users(name,username,email,password) VALUES(%s,%s,%s,%s)"
+        cursor.execute(sorgu,(name,username,email,password))
+        mysql.connection.commit()
+        cursor.close()
+        flash("Kullanıcı başarıyla eklendi..","success") 
+
+        return redirect(url_for("index"))
+
+    else:
+        return render_template("register.html",form=form) 
+
+
+#KULLANICI GİRİŞİ
+@app.route("/login",methods=["GET","POST"])
+def login():
+    form=LoginForm(request.form)
+    if request.method=="POST":
+        username=form.username.data
+        password_enter=form.password.data
+
+        cursor=mysql.connection.cursor()
+        sorgu="SELECT * from users where username=%s"
+        result=cursor.execute(sorgu,(username,))
+
+        if result > 0:
+            data=cursor.fetchone()
+            real_password=data["password"]
+            if sha256_crypt.verify(password_enter,real_password):
+                flash("Başarıyla giriş yaptınız..","success")
+                session["logged_in"]=True
+                session["username"]=username
+
+                return redirect(url_for("index"))
+            else:
+                flash("Parolanızı yanlış girdiniz..","danger")
+
+        else:
+            flash("Böyle bir kullanıcı bulunmuyor..","danger")
+            return redirect(url_for("login"))
+           
+
+    return render_template("login.html",form=form)
+
+
+
+#YÖNETİCİ GİRİŞİ
+@app.route("/admin",methods=["GET","POST"])
+def admin():
+    form=AdminForm(request.form)
+    if request.method=="POST":
+        ausername=form.ausername.data
+        apassword_enter=form.apassword.data  
+
+        cursor=mysql.connection.cursor()
+        sorgu="SELECT * from admins where ausername=%s"
+        result=cursor.execute(sorgu,(ausername,))
+
+        if result > 0:
+            data=cursor.fetchone()
+            areal_password=data["apassword"]
+            if form.validate ():
+                apassword_enter=areal_password
+                session["logged_admin"]=True
+                session["ausername"]=ausername
+
+                flash("Başarıyla giriş yaptınız..","success")
+                return redirect(url_for("index"))
+            else:
+                flash("Parolanızı yanlış girdiniz..","danger")
+
+        else:
+            flash("Böyle bir yönetici bulunmuyor..","danger")
+            return redirect(url_for("admin"))
+           
+
+    return render_template("admin.html",form=form)
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("index"))
+
+@app.route("/adminlogout")
+def adminlogout():
+    session.clear()
+    return redirect(url_for("index"))  
+
+@app.route("/addpdf",methods=["GET","POST"])
+def addpdf():
+    form=PdfForm(request.form)
+    if request.method=="POST" and form.validate() :
+        file = request.files['file']
+        file.save((file.filename))
+        title=form.title.data
+        text=form.text.data
+        projeozeti=form.projeozeti.data
+        anahtar=form.anahtar.data
+        öğrencino=form.öğrencino.data
+        öğrencino2=form.öğrencino2.data
+        dersadi=form.dersadi.data
+        tarih=form.tarih.data
+        öğretimtürü=form.öğretimtürü.data
+        öğretimtürü2=form.öğretimtürü2.data
+        baslik=form.baslik.data
+        öğrenciad=form.öğrenciad.data
+        öğrenciad2=form.öğrenciad2.data
+        
+        
+        dönem=form.dönem.data
+        
+
+        inPDFfile=file.filename
+        outTXTFile='denemePDF.txt'  
+        pdf2txt(inPDFfile,outTXTFile)
+        fihrist = open("denemePDF.txt", 'r', encoding='utf-8')
+        text = fihrist.read()
+        #text = text.strip()  
+        #print(text)
+
+        x = text.index("ÖZET")+4 
+        y = text.index("Anahtar")
+
+        projeozeti=text[x:y]
+        projeozeti = projeozeti.strip()
+
+        x = text.index("Anahtar  kelimeler:")
+        y = text.find("ix")
+
+        anahtar = text[x:y]
+        anahtar = anahtar.strip()
+
+        x = text.index("Öğrenci No")
+        y = text.index("Adı")
+        öğrencino=text[x:y]
+        
+
+        x=text.rfind("Öğrenci No")
+        y=text. rfind("Adı")
+        öğrencino2=text[x:y]
+
+        x = text.index("Adı")
+        y = text.index("İmza")
+        öğrenciad=text[x:y]
+        
+
+        x=text.rfind("Adı")
+        y=text. rfind("İmza")
+        öğrenciad2=text[x:y]
+
+        
+
+      
+
+        x=text.index("Tarih:")+5
+        y=text. rfind("GİRİŞ")
+        tarih=text[x:y]
+
+        x=text.index("Tarih:")+10
+        y=text. index("Tarih")+12
+        dönem=text[x:y]
+
+        if dönem=="09" or dönem=="10" or dönem=="11" or dönem=="12" or dönem=="01":
+            dönem="Güz Dönemi"
+        else:
+            dönem="Bahar Dönemi"    
+
+        
+
+        x=text.index("Öğrenci No")+17
+        y=text. index("Öğrenci No")+18
+        öğretimtürü=text[x:y]
+
+        x=text.rfind("İmza:")+35
+        y=text.rfind("ÖZET")
+        baslik=text[x:y]
+        
+
+
+          
+
+        x=text.rfind("Öğrenci No:")+17
+        y=text.rfind("Öğrenci No:")+18
+        öğretimtürü2=text[x:y]
+
+        if "BİTİRME PROJESİ" in text:
+            dersadi="BİTİRME PROJESİ"
+        else:
+            dersadi="ARAŞTIRMA PROBLEMLERİ"    
+
+
+        
+        
+
+
+
+        
+
+        
+      
+        cursor=mysql.connection.cursor()
+        sorgu = "Insert into pdfs (gonderici,title,projeozeti,anahtar,öğrencino,öğrencino2,dersadi,tarih,öğretimtürü,öğretimtürü2,baslik,öğrenciad,öğrenciad2,dönem) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+        
+        cursor.execute(sorgu,(session["username"],title,projeozeti,anahtar,öğrencino,öğrencino2,dersadi,tarih,öğretimtürü,öğretimtürü2,baslik,öğrenciad,öğrenciad2,dönem))
+       
+        mysql.connection.commit()
+        cursor.close()
+        flash("PDF başarıyla eklendi","success")
+        
+
+
+    return render_template("addpdf.html",form=form)
+
+class PdfForm(Form):
+    title=StringField("Başlık")
+    text=TextAreaField("İçerik")
+    projeozeti=TextAreaField("Özet")
+    anahtar=TextAreaField("Anahtar Kelimeler")  
+    öğrencino=TextAreaField("Öğrenci No")
+    öğrencino2=TextAreaField("Öğrenci No")
+    dersadi=TextAreaField("Ders Adı")
+    tarih=TextAreaField("Tarih")
+    öğretimtürü=TextAreaField("Öğretim Türü")
+    öğretimtürü2=TextAreaField("Öğretim Türü")
+    baslik=TextAreaField("Başlık")
+    öğrenciad=TextAreaField("Öğrenci Adı")
+    öğrenciad2=TextAreaField("Öğrenci Adı")
+    
+    
+    dönem=TextAreaField("Dönem")
+    
+     
+
+@app.route("/pdfs")
+def pdfs():
+    cursor=mysql.connection.cursor()
+    sorgu="Select * From pdfs where gonderici=%s"
+    result=cursor.execute(sorgu,(session["username"],))
+
+    if result > 0:
+        pdfs=cursor.fetchall()
+        return render_template("pdfs.html",pdfs=pdfs)
+    else:
+        return render_template("pdfs.html")
+
+@app.route("/pdf/<string:id>")
+def pdf(id):
+    cursor=mysql.connection.cursor()
+    sorgu="Select * From pdfs where id=%s"
+    result=cursor.execute(sorgu,(id,))
+
+    if result > 0:
+        pdf=cursor.fetchone()
+        return render_template("pdf.html",pdf=pdf)
+    else:
+        return render_template("pdf.html")  
+
+
+
+
+@app.route("/search",methods=["GET","POST"])
+def search():
+    if request.method=="GET":
+        return redirect(url_for("index"))
+    else:
+        keyword=request.form.get("keyword")  
+        cursor=mysql.connection.cursor()
+        sorgu="Select * From pdfs where title like '%"+keyword+"%'"
+        result=cursor.execute(sorgu)
+        if result ==0:
+            flash("Aranan kelimeye uygun pdf bulunumadı","danger")
+            return redirect(url_for("pdfs"))
+        else:
+            pdfs=cursor.fetchall()
+            return render_template("pdfs.html",pdfs=pdfs)    
+
+      
+
+def pdf2txt(inPDFfile,outTXTFile):
+    i=0
+    infile=open(inPDFfile,'rb')
+    resMgr=PDFResourceManager()
+    retData=io.StringIO()
+    TxtConverter=TextConverter(resMgr,retData,laparams=LAParams())
+    interpreter=PDFPageInterpreter(resMgr,TxtConverter)
+    for page in PDFPage.get_pages(infile):
+      if i==2 or i==11 or i==9 or i==12:  
+        interpreter.process_page(page)
+      i+=1
+    txt=retData.getvalue()
+
+    with open(outTXTFile,'w',encoding=" utf-8") as f:
+        f.write(txt)
+    
+    
+      
+
+
+    
+
+
+
+
+if __name__=="__main__":
+    app.run(debug=True)
+    
+
+
+
+{% macro render_field(field) %}
+{{ field.label }}
+{{ field(**kwargs)|safe }} {% if field.errors %}
+{% for error in field.errors %}
+{{ error }}
+{% endfor %}
+{% endif %}
+{% endmacro %}
+
+<nav class="navbar navbar-toggleable-md navbar-inverse fixed-top bg-inverse">
+    <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <a class="navbar-brand" href="/">PDF Sitesi</a>
+    
+    <div class="collapse navbar-collapse" id="navbarCollapse">
+      <ul class="navbar-nav mr-auto">
+        <li class="nav-item active">
+          <a class="nav-link" href="/about">Hakkımızda</a>
+        </li>
+        
+       
+      </ul>
+
+      <ul class="navbar-nav ml-auto">
+
+              {% if session["logged_in"] %}
+              <li class="nav-item active">
+                <a class="nav-link" href="/logout">Çıkış Yap</a>
+              </li>
+              <li class="nav-item active">
+                <a class="nav-link" href="/pdfs">PDF Dosyaları</a>
+              </li>
+              
+              {% elif session["logged_admin"]%}
+              <li class="nav-item active">
+                <a class="nav-link" href="/adminlogout">Yönetici Çıkışı</a>
+              </li>
+              <li class="nav-item active">
+                <a class="nav-link" href="/dashboard">Kontrol Paneli</a>
+              </li>
+              <li class="nav-item active">
+                <a class="nav-link" href="/userview">Kullanıcıları Görüntüle</a>
+              </li>
+              <li class="nav-item active">
+                <a class="nav-link" href="/register">Kullanıcı Ekle</a>
+              </li>
+              
+              {% else %}
+              <li class="nav-item active">
+                <a class="nav-link" href="/login">Giriş Yap</a>
+              </li>
+              <li class="nav-item active">
+                <a class="nav-link" href="/admin">Yönetici Girişi</a>
+              </li>
+              
+              
+               
+
+
+
+
+              {% endif %}
+
+
+
+        
+
+          
+          
+
+         
+        
+        </ul>
+    </div>
+
+
+  </nav>
+
+
+{% with messages = get_flashed_messages(with_categories=true) %} 
+{% if messages %}
+ {% for category, message in messages %}
+ <div class="alert alert-{{category}}" role="alert">
+{{ message }}
+ </div>
+{% endfor %}
+ {% endif %} 
+ {% endwith %}
+
+
+{% extends "layout.html" %}
+
+
+{% block body %}
+<h3>PDF Ekle</h3>
+<hr>
+
+{% from "includes/form.html" import render_field %}
+
+<form method="POST" enctype="multipart/form-data">
+
+    
+             {{ render_field(form.title,class="form-control") }}
+
+             
+             <br>
+
+             
+              <input type = "file" name = "file" accept="application/pdf"/>
+              <br><br>
+              <button type="submit" class="btn btn-success">Pdf Ekle</button>
+             
+     
+   <br>
+    
+    
+    <br>
+    
+</form>
+
+
+{% endblock %}
+
+
+{% extends "layout.html" %}
+
+{% block body%}
+<h3>Hakkımızda</h3>
+<hr>
+<p> PDF dosyalarını metine dönüştüren site..</p>
+<hr>
+{% endblock%}
+
+
+{% extends "layout.html" %}
+
+
+{% block body %}
+<h3>Kontrol Paneli</h3>
+<hr>
+<small>Hoşgeldiniz,{{session["ausername"]}}</small>
+<hr>
+
+
+{% if pdfs %}
+<table class="table table-hover">
+    <thead>
+      <tr>
+        <th scope="col">id</th>
+        <th scope="col">Title</th>
+        <th scope="col">Tarih</th>
+        <th scope="col">Gönderen</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for pdf in pdfs %}
+
+      <tr>
+        <th scope="row">{{pdf.id}}</th>
+        <td><a href="/pdf/{{pdf.id}}">{{pdf.title}}</a></td>
+        <td>{{pdf.created_date}}</td>
+        <td>@{{pdf.gonderici}}</td>
+      </tr>
+      {% endfor %}
+     
+       
+    </tbody>
+  </table>
+{% else %}
+
+<div class="alert alert-danger">Dosya bulunmuyor</div>
+{% endif %}
+
+{% endblock %}
+
+{% extends "layout.html" %}
+
+
+{% block body %}
+{% from "includes/form.html" import render_field %}
+<h3> Yönetici Girişi</h3>
+<hr>
+
+<form method="POST">
+
+    
+    {{ render_field(form.ausername) }} 
+   <br>
+    {{ render_field(form.apassword) }}
+    
+    <br>
+    <button type="submit" class="btn -btn primary">Giriş Yap</button>
+</form>
+
+{% endblock %}
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie-edge">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
+    
+    <title>R&F</title>
+</head>
+
+<body>
+{% include "includes/navbar.html"%}
+<br><br><br>
+{% include "includes/messages.html"%}
+<div class="container">
+{% block body %}
+
+{% endblock %}
+</div>
+
+
+
+    
+    <script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
+   
+</body>
+
+</html>
+
+{% extends "layout.html"%}
+
+
+{% block body%}
+<div class="jumbotron text-center " style="background-color: bisque">
+<h2 style="color:indigo">PDF İşleme Sitesi</h2>
+</div>
+<br>
+{% if session["logged_in"] %}
+             
+              <a href="/addpdf" class="btn btn-success"> PDF EKLE</a>
+              {% endif %}
+{% endblock%}
+
+
+{% extends "layout.html" %}
+
+
+{% block body %}
+
+
+<h3>Kullanıcılar</h3>
+<hr>
+
+
+
+{% if users %}
+<table class="table table-hover">
+    <thead>
+      <tr>
+        <th scope="col">id</th>
+        <th scope="col">Ad Soyad</th>
+        <th scope="col">Kullanıcı Adı</th>
+        <th scope="col">Parola</th>
+        <th scope="col"> E-Mail</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+
+      <tr>
+        <th scope="row">{{user.id}}</th>
+        <td>{{user.name}}</td>
+        <td>{{user.username}}</td>
+        <td>{{user.password}}</td>
+        <td>{{user.email}}</td>
+        <td><a href="/delete/{{user.id}}" class="btn btn-success">Sil</a></td>
+        <td><a href="/edit/{{user.id}}" class="btn btn-success">Güncelle</a></td>
+      </tr>
+      {% endfor %}
+     
+       
+    </tbody>
+  </table>
+{% else %}
+
+<div class="alert alert-danger">Kullanıcı bulunmuyor</div>
+{% endif %}
+
+   
+
+{% endblock %}
+
+
+{% extends "layout.html" %}
+
+
+{% block body %}
+<h3>Kullanıcı Güncelle</h3>
+<hr>
+
+{% from "includes/form.html" import render_field %}
+
+<form method="POST" >
+             {{ render_field(form.name,class="form-control") }}
+    
+             {{ render_field(form.username,class="form-control") }}
+             {{ render_field(form.password,class="form-control") }}
+
+             
+             <br>
+
+             
+              <button type="submit" class="btn btn-danger">Güncelle</button>
+             
+     
+   <br>
+    
+    
+    <br>
+    
+</form>
+
+
+{% endblock %}
+
+{% extends "layout.html" %}
+{% from "includes/form.html" import render_field %}
+{% block body %}
+<h3> Kayıt Olun</h3>
+<hr>
+
+<form method="POST">
+
+    {{ render_field(form.name,class = "form-control") }} 
+    {{ render_field(form.username,class = "form-control") }} 
+    {{ render_field(form.email,class = "form-control") }}
+    {{ render_field(form.password,class = "form-control") }}
+    {{ render_field(form.confirm,class = "form-control") }}
+    <br>
+    <button type="submit" class="btn -btn primary">Kayıt Ol</button>
+</form>
+
+{% endblock %}
+
+
+{% extends "layout.html" %}
+
+
+{% block body %}
+
+<h3>PDF DOSYALARI</h3>
+<hr>
+
+{% if pdfs %}
+<form action="/search" method="post">
+    <input class="borderless" name="keyword" type="search" placeholder="Ara">
+    <button class="btn  btn-success" type="submit">Ara</button>
+</form>
+<hr>
+
+<ul class="list-group">
+    {% for pdf in pdfs %}
+
+
+        <li class="list-group-item" ><a href="pdf/{{pdf.id}}">{{pdf.title}}</a></li>
+    
+  
+    {% endfor %}
+</ul>
+
+
+{% else %}
+
+<div class="alert alert-danger">Dosya bulunmuyor</div>
+{% endif %}
+
+   
+
+{% endblock %}
+
+
+{% extends "layout.html" %}
+
+
+{% block body %}
+
+
+
+{% if pdf %}
+
+
+<h4>{{pdf.title}}</h4>
+<hr>
+Gönderen:{{pdf.gonderici}}
+<hr>
+<br>
+ÖZET
+<br>
+{{pdf.projeozeti}}
+<br><br>
+<hr>
+
+{{pdf.anahtar}}
+<br><br>
+<hr>
+ {{pdf.öğrenciad}} 
+ {{pdf.öğrencino}}<br> 
+ {{pdf.öğretimtürü}} <span> . Öğretim</span>
+<hr>
+<br>
+ {{pdf.öğrenciad2}}
+ {{pdf.öğrencino2}} <br>
+ {{pdf.öğretimtürü2}} <span> . Öğretim</span>
+<hr>
+
+<br><br>
+
+
+Ders Adı:{{pdf.dersadi}}
+<br><br>
+<hr>
+Tarih{{pdf.tarih}}
+Dönem:{{pdf.dönem}}
+<br><br>
+<hr>
+Başlık:{{pdf.baslik}}
+<br><br>
+
+
+{% else %}
+
+<div class="alert alert-warning">Dosya bulunmuyor</div>
+{% endif %}
+
+   
+
+{% endblock %}
+
+
+
+{% extends "layout.html" %}
+
+
+{% block body %}
+{% from "includes/form.html" import render_field %}
+<h3>GİRİŞ YAP</h3>
+<hr>
+<form method="POST">
+
+    
+    {{ render_field(form.username) }} 
+   <br>
+
+    {{ render_field(form.password) }}
+    
+    <br>
+    <button type="submit" class="btn -btn primary">Giriş Yap</button>
+</form>
+
+{% endblock %}
+
+
+

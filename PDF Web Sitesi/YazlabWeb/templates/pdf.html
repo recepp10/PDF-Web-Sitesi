@@ -1,0 +1,56 @@
+{% extends "layout.html" %}
+
+
+{% block body %}
+
+
+
+{% if pdf %}
+
+
+<h4>{{pdf.title}}</h4>
+<hr>
+Gönderen:{{pdf.gonderici}}
+<hr>
+<br>
+ÖZET
+<br>
+{{pdf.projeozeti}}
+<br><br>
+<hr>
+
+{{pdf.anahtar}}
+<br><br>
+<hr>
+ {{pdf.öğrenciad}} 
+ {{pdf.öğrencino}}<br> 
+ {{pdf.öğretimtürü}} <span> . Öğretim</span>
+<hr>
+<br>
+ {{pdf.öğrenciad2}}
+ {{pdf.öğrencino2}} <br>
+ {{pdf.öğretimtürü2}} <span> . Öğretim</span>
+<hr>
+
+<br><br>
+
+
+Ders Adı:{{pdf.dersadi}}
+<br><br>
+<hr>
+Tarih{{pdf.tarih}}
+Dönem:{{pdf.dönem}}
+<br><br>
+<hr>
+Başlık:{{pdf.baslik}}
+<br><br>
+
+
+{% else %}
+
+<div class="alert alert-warning">Dosya bulunmuyor</div>
+{% endif %}
+
+   
+
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "layout.html"%}
+
+
+{% block body%}
+<div class="jumbotron text-center " style="background-color: bisque">
+<h2 style="color:indigo">PDF İşleme Sitesi</h2>
+</div>
+<br>
+{% if session["logged_in"] %}
+             
+              <a href="/addpdf" class="btn btn-success"> PDF EKLE</a>
+              {% endif %}
+{% endblock%}
